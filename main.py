@@ -1,8 +1,9 @@
 import pygame
 import math
-from settings import SCREEN_WIDTH, SCREEN_HEIGHT, screen, IMAGE_PATHS
+import random
+from settings import SCREEN_WIDTH, SCREEN_HEIGHT, screen, IMAGE_PATHS, FONT, SOUND_PATHS
 from player import Player
-from enemy import Enemy
+from enemy import Enemy, Enemy_armor
 
 # Загрузка и масштабирование фона
 try:
@@ -37,10 +38,16 @@ player = Player(200, ground_rect.y - 70)  # 70 - высота персонажа
 bullets = []
 enemies = []
 enemy_spawn_timer = 0
-enemy_spawn_interval = 180  # кадры между спавном врагов
+enemy_spawn_interval = 80  # кадры между спавном врагов
+
+k = 20
 
 running = True
 clock = pygame.time.Clock()  # Для контроля FPS
+
+pygame.mixer.music.load('sounds/background.mp3')
+pygame.mixer.music.set_volume(0.1)
+pygame.mixer.music.play(-1)  # -1 означает зацикливание
 
 while running:
     # Обработка событий
@@ -54,6 +61,9 @@ while running:
             mouse_x, mouse_y = pygame.mouse.get_pos()
             bullets.append(player.shoot(mouse_x, mouse_y))
 
+    if k <= 0:
+        running = False
+
     # Обновление игрока
     keys = pygame.key.get_pressed()
     player.update(keys)
@@ -63,9 +73,16 @@ while running:
     if enemy_spawn_timer >= enemy_spawn_interval:
         player_center_x = player.x + player.rect.width // 2
         player_center_y = player.y + player.rect.height // 2
-        enemies.append(Enemy(player_center_x, player_center_y))
+        if random.randint(0, 2) == 0:
+            enemies.append(Enemy(player_center_x, player_center_y))
+        elif random.randint(0, 2) == 1:
+            enemies.append(Enemy_armor(player_center_x, player_center_y))
         enemy_spawn_timer = 0
         enemy_spawn_interval = max(30, enemy_spawn_interval - 1)
+
+    # Загрузка звука получения урона
+    hit_sound_enemy = pygame.mixer.Sound(SOUND_PATHS['hit_sound_enemy'])
+    hit_sound_enemy.set_volume(0.1)  # Громкость от 0.0 до 1.0
 
     # Обновление пуль
     for bullet in bullets[:]:
@@ -80,8 +97,10 @@ while running:
                         enemy.hp -= bullet.damage
                         if bullet in bullets:
                             bullets.remove(bullet)
+                            hit_sound_enemy.play()
                         if enemy.hp <= 0:
                             enemies.remove(enemy)
+                            k -= 1
                         break
                 else:
                     distance = math.sqrt((bullet.x - enemy.x) ** 2 + (bullet.y - enemy.y) ** 2)
@@ -101,9 +120,9 @@ while running:
         enemy.update(player_center_x, player_center_y)
         if enemy.is_off_screen():
             enemies.remove(enemy)
+
         elif enemy.rect.colliderect(player.rect):
             if player.take_damage(enemy.damage) and player.hp <= 0:
-                print("Игра окончена!")
                 running = False
 
     # Отрисовка
@@ -119,6 +138,10 @@ while running:
     # Рисуем врагов
     for enemy in enemies:
         enemy.draw(screen)
+
+    hp_text = f"Цель: убить {k} врагов"
+    text_surface = FONT.render(hp_text, True, (255, 255, 255))
+    screen.blit(text_surface, (10, 40))
 
     pygame.display.update()
     clock.tick(60)  # 60 FPS

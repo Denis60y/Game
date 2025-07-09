@@ -1,18 +1,35 @@
 import pygame
-from settings import SCREEN_WIDTH, GROUND_HEIGHT, FONT, IMAGE_PATHS, SCREEN_HEIGHT
+from settings import SCREEN_WIDTH, GROUND_HEIGHT, FONT, IMAGE_PATHS, SCREEN_HEIGHT, SOUND_PATHS
 from bullet import Bullet
+
 
 class Player:
     def __init__(self, x, y):
-        # Загрузка изображений
+        # Загрузка обычных изображений игрока (стояние на месте)
         player_original = pygame.image.load(IMAGE_PATHS['player'])
         new_width, new_height = 70, 70
+
+        # Загрузка звука получения урона
+        self.hit_sound = pygame.mixer.Sound(SOUND_PATHS['hit_sound'])
+        self.hit_sound.set_volume(0.3)  # Громкость от 0.0 до 1.0
+
+        self.jump_sound = pygame.mixer.Sound(SOUND_PATHS['jump_sound'])
+        self.jump_sound.set_volume(0.2)  # Громкость от 0.0 до 1.0
+
         self.player_right = pygame.transform.scale(player_original, (new_width, new_height))
         self.player_left = pygame.transform.flip(self.player_right, True, False)
+
+        # Загрузка анимации получения урона
+        self.hit_animation = self.load_animation(IMAGE_PATHS['hit_animation'], 4, new_width, new_height)
+        self.hit_animation_left = [pygame.transform.flip(frame, True, False) for frame in self.hit_animation]
+
+        # Загрузка анимации ходьбы (6 кадров)
+        self.walk_animation_right = self.load_animation(IMAGE_PATHS['run'], 6, new_width, new_height)
+        self.walk_animation_left = [pygame.transform.flip(frame, True, False) for frame in self.walk_animation_right]
+
         self.current_image = self.player_right
         self.rect = self.player_right.get_rect()
 
-        # Позиция и движение
         self.x = x
         self.y = y
         self.speed = 5
@@ -20,52 +37,101 @@ class Player:
         self.gravity = 0.5
         self.jump_power = 12
         self.initial_jump_power = 12
-        self.y_velocity = 0  # Добавляем вертикальную скорость
+        self.y_velocity = 0
 
-        # Характеристики
+        # Параметры здоровья
         self.hp = 10
         self.max_hp = 10
         self.invincibility_timer = 0
 
-    def update(self, keys):
-        # Обработка движения
-        if keys[pygame.K_a]:
-            self.x -= self.speed
-            self.current_image = self.player_left
-        if keys[pygame.K_d]:
-            self.x += self.speed
-            self.current_image = self.player_right
+        # Параметры анимации получения урона
+        self.is_hit = False
+        self.hit_animation_frame = 0
+        self.hit_animation_speed = 15
+        self.hit_animation_counter = 0
 
-        # Границы экрана по горизонтали
+        # Параметры анимации ходьбы
+        self.is_walking = False
+        self.walk_animation_frame = 0
+        self.walk_animation_speed = 5  # Чем меньше, тем быстрее анимация
+        self.walk_animation_counter = 0
+        self.facing_right = True  # Направление взгляда
+
+    def load_animation(self, image_path, frame_count, width, height):
+        """Универсальный метод загрузки анимации"""
+        sheet = pygame.image.load(image_path)
+        frames = []
+
+        # Предполагаем, что кадры расположены горизонтально
+        frame_width = sheet.get_width() // frame_count
+        frame_height = sheet.get_height()
+
+        for i in range(frame_count):
+            frame = sheet.subsurface(pygame.Rect(i * frame_width, 0, frame_width, frame_height))
+            frames.append(pygame.transform.scale(frame, (width, height)))
+
+        return frames
+
+    def update(self, keys):
+        # Определяем, идет ли игрок
+        moving_left = keys[pygame.K_a]
+        moving_right = keys[pygame.K_d]
+        self.is_walking = moving_left or moving_right
+
+        # Обработка движения
+        if moving_left:
+            self.x -= self.speed
+            self.facing_right = False
+        if moving_right:
+            self.x += self.speed
+            self.facing_right = True
+
         self.x = max(0, min(self.x, SCREEN_WIDTH - self.rect.width))
 
-        # Механика прыжка и гравитации
+        # Обработка прыжка
         if self.is_jumping:
             self.y_velocity -= self.jump_power
-            self.is_jumping = False  # Сбрасываем флаг прыжка после применения силы
+            self.is_jumping = False
 
-        # Применяем гравитацию
+        # Гравитация
         self.y_velocity += self.gravity
         self.y += self.y_velocity
 
-        # Проверка приземления
+        # Проверка земли
         ground_level = SCREEN_HEIGHT - GROUND_HEIGHT - self.rect.height
         if self.y >= ground_level:
             self.y = ground_level
-            self.y_velocity = 0  # Сбрасываем вертикальную скорость при приземлении
+            self.y_velocity = 0
 
-        # Обновление таймера неуязвимости
+        # Обработка неуязвимости и анимации получения урона
         if self.invincibility_timer > 0:
             self.invincibility_timer -= 1
+            self.is_hit = True
 
-        # Обновление rect для коллизий
+            # Обновление анимации получения урона
+            self.hit_animation_counter += 1
+            if self.hit_animation_counter >= self.hit_animation_speed:
+                self.hit_animation_counter = 0
+                self.hit_animation_frame = (self.hit_animation_frame + 1) % len(self.hit_animation)
+        else:
+            self.is_hit = False
+            self.hit_animation_frame = 0
+            self.hit_animation_counter = 0
+
+        # Обновление анимации ходьбы
+        if self.is_walking and not self.is_hit:
+            self.walk_animation_counter += 1
+            if self.walk_animation_counter >= self.walk_animation_speed:
+                self.walk_animation_counter = 0
+                self.walk_animation_frame = (self.walk_animation_frame + 1) % len(self.walk_animation_right)
+
         self.rect.topleft = (self.x, self.y)
 
     def jump(self):
-        # Проверяем, что персонаж стоит на земле (не в прыжке)
         ground_level = SCREEN_HEIGHT - GROUND_HEIGHT - self.rect.height
-        if self.y >= ground_level - 1:  # Небольшой допуск для плавающей точки
+        if self.y >= ground_level - 1:
             self.is_jumping = True
+            self.jump_sound.play()
 
     def shoot(self, target_x, target_y):
         player_center_x = self.x + self.rect.width // 2
@@ -76,14 +142,40 @@ class Player:
         if self.invincibility_timer <= 0:
             self.hp -= damage
             self.invincibility_timer = 60  # 1 секунда неуязвимости
+            self.is_hit = True
+            self.hit_animation_frame = 0
+            self.hit_animation_counter = 0
+
+            # Воспроизведение звука получения урона
+            self.hit_sound.play()
+
             return True
         return False
 
     def draw(self, screen):
-        # Рисуем игрока
-        screen.blit(self.current_image, (self.x, self.y))
+        # Определяем текущее изображение для отрисовки
+        if self.is_hit:
+            # Анимация получения урона
+            if self.facing_right:
+                current_frame = self.hit_animation[self.hit_animation_frame]
+            else:
+                current_frame = self.hit_animation_left[self.hit_animation_frame]
+        elif self.is_walking:
+            # Анимация ходьбы
+            if self.facing_right:
+                current_frame = self.walk_animation_right[self.walk_animation_frame]
+            else:
+                current_frame = self.walk_animation_left[self.walk_animation_frame]
+        else:
+            # Стояние на месте
+            if self.facing_right:
+                current_frame = self.player_right
+            else:
+                current_frame = self.player_left
 
-        # Рисуем здоровье
-        hp_text = f"HP: {self.hp}/{self.max_hp}"
+        screen.blit(current_frame, (self.x, self.y))
+
+        # Отрисовка здоровья
+        hp_text = f"ОЗ: {self.hp}/{self.max_hp}"
         text_surface = FONT.render(hp_text, True, (255, 255, 255))
         screen.blit(text_surface, (10, 10))
