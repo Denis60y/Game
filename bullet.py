@@ -17,12 +17,10 @@ class Bullet:
         self.vx = self.speed * dx / distance
         self.vy = self.speed * dy / distance
 
-        # Угол поворота пули в направлении движения
         self.angle = math.degrees(math.atan2(dy, dx))
         try:
             bullet_img = pygame.image.load(IMAGE_PATHS['bullet']).convert_alpha()
             bullet_img = pygame.transform.scale(bullet_img, (40, 10))
-            # Поворачиваем изображение пули
             self.image = pygame.transform.rotate(bullet_img, -self.angle)
             self.rect = self.image.get_rect(center=(x, y))
         except:

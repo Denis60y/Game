@@ -5,16 +5,15 @@ from settings import IMAGE_PATHS, SCREEN_WIDTH, SCREEN_HEIGHT
 
 class Enemy:
     def __init__(self, player_x, player_y):
-        # Спавн строго за пределами экрана
         spawn_side = random.randint(0, 2)
 
-        if spawn_side == 0:  # Сверху (за экраном)
+        if spawn_side == 0:
             self.x = random.randint(-50, SCREEN_WIDTH + 50)
             self.y = -50
-        elif spawn_side == 1:  # Справа (за экраном)
+        elif spawn_side == 1:
             self.x = SCREEN_WIDTH + 50
             self.y = random.randint(-50, SCREEN_HEIGHT)
-        elif spawn_side == 2:  # Слева (за экраном)
+        elif spawn_side == 2:
             self.x = -50
             self.y = random.randint(-50, SCREEN_HEIGHT)
 
@@ -26,19 +25,16 @@ class Enemy:
         self.damage = 1
 
         try:
-            # Загружаем оригинальное изображение (предполагаем, что оно смотрит вправо)
             original_image = pygame.image.load(IMAGE_PATHS['enemy']).convert_alpha()
             self.original_image = pygame.transform.scale(original_image, (self.width, self.height))
-            # Создаем зеркальное изображение для взгляда влево
             self.flipped_image = pygame.transform.flip(self.original_image, True, False)
-            # Текущее изображение (изначально смотрит вправо)
             self.image = self.original_image
             self.rect = self.image.get_rect(center=(self.x, self.y))
         except:
             self.image = None
             self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
 
-        # Направление к игроку
+
         self.calculate_direction(player_x, player_y)
 
         if spawn_side == 1 or (spawn_side == 0 and self.x > SCREEN_WIDTH / 2):  # Справа (за экраном)
@@ -63,7 +59,6 @@ class Enemy:
         self.y += self.vy
         self.rect.center = (self.x, self.y)
 
-        # Обновляем направление (чтобы враги преследовали игрока)
         self.calculate_direction(player_x, player_y)
 
     def draw(self, screen):
@@ -72,16 +67,14 @@ class Enemy:
         else:
             pygame.draw.rect(screen, (255, 0, 0), self.rect)
 
-        # Рисуем здоровье
         hp_bar_width = 40
         hp_bar_height = 5
         hp_bar_x = self.x - hp_bar_width // 2
         hp_bar_y = self.y - 30
 
-        # Фон полоски HP
         pygame.draw.rect(screen, (255, 0, 0),
                          (hp_bar_x, hp_bar_y, hp_bar_width, hp_bar_height))
-        # Текущее HP
+
         current_hp_width = (self.hp / self.max_hp) * hp_bar_width
         pygame.draw.rect(screen, (0, 255, 0),
                          (hp_bar_x, hp_bar_y, current_hp_width, hp_bar_height))
@@ -93,16 +86,15 @@ class Enemy:
 
 class Enemy_armor:
     def __init__(self, player_x, player_y):
-        # Спавн строго за пределами экрана
         spawn_side = random.randint(0, 2)
 
-        if spawn_side == 0:  # Сверху (за экраном)
+        if spawn_side == 0:
             self.x = random.randint(-50, SCREEN_WIDTH + 50)
             self.y = -50
-        elif spawn_side == 1:  # Справа (за экраном)
+        elif spawn_side == 1:
             self.x = SCREEN_WIDTH + 50
             self.y = random.randint(-50, SCREEN_HEIGHT)
-        elif spawn_side == 2:  # Слева (за экраном)
+        elif spawn_side == 2:
             self.x = -50
             self.y = random.randint(-50, SCREEN_HEIGHT)
 
@@ -123,7 +115,6 @@ class Enemy_armor:
             self.image = None
             self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
 
-        # Направление к игроку
         self.calculate_direction(player_x, player_y)
 
         if spawn_side == 1 or (spawn_side == 0 and self.x > SCREEN_WIDTH / 2):  # Справа (за экраном)
@@ -148,7 +139,6 @@ class Enemy_armor:
         self.y += self.vy
         self.rect.center = (self.x, self.y)
 
-        # Обновляем направление (чтобы враги преследовали игрока)
         self.calculate_direction(player_x, player_y)
 
     def draw(self, screen):
@@ -157,16 +147,14 @@ class Enemy_armor:
         else:
             pygame.draw.rect(screen, (255, 0, 0), self.rect)
 
-        # Рисуем здоровье
         hp_bar_width = 40
         hp_bar_height = 5
         hp_bar_x = self.x - hp_bar_width // 2
         hp_bar_y = self.y - 30
 
-        # Фон полоски HP
         pygame.draw.rect(screen, (255, 0, 0),
                          (hp_bar_x, hp_bar_y, hp_bar_width, hp_bar_height))
-        # Текущее HP
+
         current_hp_width = (self.hp / self.max_hp) * hp_bar_width
         pygame.draw.rect(screen, (0, 255, 0),
                          (hp_bar_x, hp_bar_y, current_hp_width, hp_bar_height))

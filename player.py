@@ -5,25 +5,21 @@ from bullet import Bullet
 
 class Player:
     def __init__(self, x, y):
-        # Загрузка обычных изображений игрока (стояние на месте)
         player_original = pygame.image.load(IMAGE_PATHS['player'])
         new_width, new_height = 70, 70
 
-        # Загрузка звука получения урона
         self.hit_sound = pygame.mixer.Sound(SOUND_PATHS['hit_sound'])
-        self.hit_sound.set_volume(0.3)  # Громкость от 0.0 до 1.0
+        self.hit_sound.set_volume(0.3)
 
         self.jump_sound = pygame.mixer.Sound(SOUND_PATHS['jump_sound'])
-        self.jump_sound.set_volume(0.2)  # Громкость от 0.0 до 1.0
+        self.jump_sound.set_volume(0.2)
 
         self.player_right = pygame.transform.scale(player_original, (new_width, new_height))
         self.player_left = pygame.transform.flip(self.player_right, True, False)
 
-        # Загрузка анимации получения урона
         self.hit_animation = self.load_animation(IMAGE_PATHS['hit_animation'], 4, new_width, new_height)
         self.hit_animation_left = [pygame.transform.flip(frame, True, False) for frame in self.hit_animation]
 
-        # Загрузка анимации ходьбы (6 кадров)
         self.walk_animation_right = self.load_animation(IMAGE_PATHS['run'], 6, new_width, new_height)
         self.walk_animation_left = [pygame.transform.flip(frame, True, False) for frame in self.walk_animation_right]
 
@@ -39,30 +35,26 @@ class Player:
         self.initial_jump_power = 12
         self.y_velocity = 0
 
-        # Параметры здоровья
         self.hp = 10
         self.max_hp = 10
         self.invincibility_timer = 0
 
-        # Параметры анимации получения урона
         self.is_hit = False
         self.hit_animation_frame = 0
         self.hit_animation_speed = 15
         self.hit_animation_counter = 0
 
-        # Параметры анимации ходьбы
         self.is_walking = False
         self.walk_animation_frame = 0
-        self.walk_animation_speed = 5  # Чем меньше, тем быстрее анимация
+        self.walk_animation_speed = 5
         self.walk_animation_counter = 0
-        self.facing_right = True  # Направление взгляда
+        self.facing_right = True
 
     def load_animation(self, image_path, frame_count, width, height):
         """Универсальный метод загрузки анимации"""
         sheet = pygame.image.load(image_path)
         frames = []
 
-        # Предполагаем, что кадры расположены горизонтально
         frame_width = sheet.get_width() // frame_count
         frame_height = sheet.get_height()
 
@@ -73,12 +65,10 @@ class Player:
         return frames
 
     def update(self, keys):
-        # Определяем, идет ли игрок
         moving_left = keys[pygame.K_a]
         moving_right = keys[pygame.K_d]
         self.is_walking = moving_left or moving_right
 
-        # Обработка движения
         if moving_left:
             self.x -= self.speed
             self.facing_right = False
@@ -88,27 +78,22 @@ class Player:
 
         self.x = max(0, min(self.x, SCREEN_WIDTH - self.rect.width))
 
-        # Обработка прыжка
         if self.is_jumping:
             self.y_velocity -= self.jump_power
             self.is_jumping = False
 
-        # Гравитация
         self.y_velocity += self.gravity
         self.y += self.y_velocity
 
-        # Проверка земли
         ground_level = SCREEN_HEIGHT - GROUND_HEIGHT - self.rect.height
         if self.y >= ground_level:
             self.y = ground_level
             self.y_velocity = 0
 
-        # Обработка неуязвимости и анимации получения урона
         if self.invincibility_timer > 0:
             self.invincibility_timer -= 1
             self.is_hit = True
 
-            # Обновление анимации получения урона
             self.hit_animation_counter += 1
             if self.hit_animation_counter >= self.hit_animation_speed:
                 self.hit_animation_counter = 0
@@ -118,7 +103,6 @@ class Player:
             self.hit_animation_frame = 0
             self.hit_animation_counter = 0
 
-        # Обновление анимации ходьбы
         if self.is_walking and not self.is_hit:
             self.walk_animation_counter += 1
             if self.walk_animation_counter >= self.walk_animation_speed:
@@ -141,33 +125,28 @@ class Player:
     def take_damage(self, damage):
         if self.invincibility_timer <= 0:
             self.hp -= damage
-            self.invincibility_timer = 60  # 1 секунда неуязвимости
+            self.invincibility_timer = 60
             self.is_hit = True
             self.hit_animation_frame = 0
             self.hit_animation_counter = 0
 
-            # Воспроизведение звука получения урона
             self.hit_sound.play()
 
             return True
         return False
 
     def draw(self, screen):
-        # Определяем текущее изображение для отрисовки
         if self.is_hit:
-            # Анимация получения урона
             if self.facing_right:
                 current_frame = self.hit_animation[self.hit_animation_frame]
             else:
                 current_frame = self.hit_animation_left[self.hit_animation_frame]
         elif self.is_walking:
-            # Анимация ходьбы
             if self.facing_right:
                 current_frame = self.walk_animation_right[self.walk_animation_frame]
             else:
                 current_frame = self.walk_animation_left[self.walk_animation_frame]
         else:
-            # Стояние на месте
             if self.facing_right:
                 current_frame = self.player_right
             else:
@@ -175,7 +154,6 @@ class Player:
 
         screen.blit(current_frame, (self.x, self.y))
 
-        # Отрисовка здоровья
         hp_text = f"ОЗ: {self.hp}/{self.max_hp}"
         text_surface = FONT.render(hp_text, True, (255, 255, 255))
         screen.blit(text_surface, (10, 10))
